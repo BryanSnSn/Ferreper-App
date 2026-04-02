@@ -22,8 +22,6 @@
             --dark: #0f172a;
             --darker: #020617;
             --bg: #f8fafc;
-            --success: #10b981;
-            --danger: #ef4444;
         }
 
         body { 
@@ -218,17 +216,9 @@
         .toast-exit { animation: fadeOut 0.4s ease forwards; }
 
         /* Custom Dropdown Scrollbar for Autocomplete */
-        .custom-dropdown-scroll::-webkit-scrollbar {
-            width: 8px;
-        }
-        .custom-dropdown-scroll::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 8px;
-        }
-        .custom-dropdown-scroll::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1;
-            border-radius: 8px;
-        }
+        .custom-dropdown-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-dropdown-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        .custom-dropdown-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -299,7 +289,7 @@
             // ESTADOS: FORMULARIO DE INVENTARIO
             // ------------------------------------------
             const [editId, setEditId] = useState(null);
-            const [fCodigo, setFCodigo] = useState(''); // ESTA ES LA VARIABLE QUE FALTABA
+            const [fCodigo, setFCodigo] = useState('');
             const [fNombre, setFNombre] = useState('');
             const [fCategoria, setFCategoria] = useState('');
             const [fStock, setFStock] = useState('');
@@ -309,9 +299,9 @@
             // ------------------------------------------
             // ESTADOS: FORMULARIO DE VENTA (AUTOCOMPLETE)
             // ------------------------------------------
-            const [vSearchTerm, setVSearchTerm] = useState(''); // Lo que el usuario escribe
-            const [vSelectedId, setVSelectedId] = useState(''); // El ID real del producto seleccionado
-            const [vShowDropdown, setVShowDropdown] = useState(false); // Mostrar/ocultar lista
+            const [vSearchTerm, setVSearchTerm] = useState(''); 
+            const [vSelectedId, setVSelectedId] = useState(''); 
+            const [vShowDropdown, setVShowDropdown] = useState(false); 
             const [vQty, setVQty] = useState(1);
 
             // ------------------------------------------
@@ -347,7 +337,7 @@
                     addToast("Error de conexión: No se pudo cargar el inventario", "error");
                 });
 
-                // Sincronizar Historial de Ventas (Límite 300 para no sobrecargar)
+                // Sincronizar Historial de Ventas
                 const unsubSales = db.collection("ventas")
                     .orderBy("fecha", "desc")
                     .limit(300)
@@ -366,7 +356,6 @@
                         addToast("Error de conexión: No se pudo cargar el historial", "error");
                     });
 
-                // Cleanup listeners on unmount
                 return () => { 
                     unsubInv(); 
                     unsubSales(); 
@@ -390,6 +379,19 @@
             };
 
             // ==========================================
+            // LÓGICA DE ORDENAMIENTO SEGURO (ANTI-PANTALLA BLANCA)
+            // ==========================================
+            // Creamos una lista segura, inmutable y siempre ordenada.
+            // Protege contra valores null/undefined usando String() y || ''
+            const sortedInventory = useMemo(() => {
+                return [...inventory].sort((a, b) => {
+                    const nameA = String(a.nombre || '').toLowerCase();
+                    const nameB = String(b.nombre || '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+            }, [inventory]);
+
+            // ==========================================
             // LÓGICA: GENERADOR AUTOMÁTICO DE CÓDIGOS ÚNICOS
             // ==========================================
             const generateNextCode = () => {
@@ -409,7 +411,7 @@
             // ==========================================
             const salesHoy = useMemo(() => {
                 const inicioDia = new Date();
-                inicioDia.setHours(0, 0, 0, 0); // Desde las 00:00 de hoy
+                inicioDia.setHours(0, 0, 0, 0); 
                 return sales.filter(s => s.rawDate >= inicioDia);
             }, [sales]);
 
@@ -425,7 +427,7 @@
             // ==========================================
             const resetForm = () => {
                 setEditId(null);
-                setFCodigo(''); // Reiniciamos también el código
+                setFCodigo(''); 
                 setFNombre('');
                 setFCategoria('');
                 setFStock('');
@@ -436,7 +438,7 @@
             const handleSaveProduct = async (e) => {
                 e.preventDefault();
                 
-                // CANDADO: Evitar doble submit rápido
+                // CANDADO
                 if (isSavingProductRef.current) return;
                 isSavingProductRef.current = true;
                 setUiSavingProduct(true);
@@ -470,10 +472,9 @@
                 }
             };
 
-            // AL PULSAR EDITAR, RECUPERAMOS LOS DATOS A LAS VARIABLES
             const handleEditEntry = (p) => {
                 setEditId(p.id);
-                setFCodigo(p.codigo || ''); // AQUÍ ESTÁ LA CORRECCIÓN CLAVE
+                setFCodigo(p.codigo || ''); 
                 setFNombre(p.nombre || '');
                 setFCategoria(p.categoria || '');
                 setFStock(p.stock || 0);
@@ -509,7 +510,7 @@
 
                         let count = 0;
                         lines.slice(1).forEach(line => {
-                            if (!line.trim()) return; // Ignorar líneas en blanco
+                            if (!line.trim()) return; 
                             const cols = line.split(separator);
                             if (cols.length >= 5) {
                                 const ref = db.collection('productos').doc();
@@ -527,7 +528,7 @@
                         
                         await batch.commit();
                         addToast(`Importación exitosa: Se añadieron ${count} artículos.`, "success");
-                        e.target.value = null; // Resetear el input file
+                        e.target.value = null; 
                     } catch (err) {
                         addToast("Error al procesar el archivo. Verifique el formato.", "error");
                     }
@@ -539,12 +540,12 @@
             // LÓGICA DE AUTOCOMPLETADO PARA VENTAS
             // ==========================================
             const filteredAutocomplete = useMemo(() => {
-                if (!vSearchTerm) return []; // Si está vacío, no mostrar nada
-                return inventory.filter(p => 
-                    p.nombre?.toLowerCase().includes(vSearchTerm.toLowerCase()) || 
-                    p.codigo?.includes(vSearchTerm)
-                ).sort((a,b) => a.nombre.localeCompare(b.nombre));
-            }, [inventory, vSearchTerm]);
+                if (!vSearchTerm) return []; 
+                return sortedInventory.filter(p => 
+                    String(p.nombre || '').toLowerCase().includes(vSearchTerm.toLowerCase()) || 
+                    String(p.codigo || '').includes(vSearchTerm)
+                );
+            }, [sortedInventory, vSearchTerm]);
 
             // ==========================================
             // LÓGICA DE VENTAS (ANTI-DUPLICADOS + BATCH)
@@ -552,10 +553,8 @@
             const handleProcessSale = async (e) => {
                 e.preventDefault();
                 
-                // 1. CANDADO: Evitar múltiples envíos si el servidor está lento
-                if (isProcessingSaleRef.current) {
-                    return;
-                }
+                // 1. CANDADO
+                if (isProcessingSaleRef.current) return;
                 
                 // 2. VALIDACIONES
                 if (!vSelectedId) {
@@ -577,9 +576,7 @@
 
                 try {
                     // 4. TRANSACCIÓN ATÓMICA DE FIREBASE (BATCH)
-                    // Garantiza que o se hace todo (venta + resta de stock) o no se hace nada.
                     const batch = db.batch();
-                    
                     const ventaRef = db.collection("ventas").doc(); 
                     const prodRef = db.collection("productos").doc(vSelectedId);
 
@@ -600,7 +597,7 @@
                     // 5. LIMPIEZA POST-VENTA
                     addToast(`Venta Registrada: ${prod.nombre} (x${quantity})`, "success");
                     setVSelectedId('');
-                    setVSearchTerm(''); // Limpiar el input autocompletable
+                    setVSearchTerm(''); 
                     setVQty(1);
                     
                 } catch (err) {
@@ -616,10 +613,13 @@
             // ==========================================
             // LÓGICA: FILTRO DEL BUSCADOR GLOBAL
             // ==========================================
-            const filteredGlobalSearch = inventory.filter(p => 
-                p.nombre?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                p.codigo?.includes(searchQuery)
-            ).sort((a,b) => a.nombre.localeCompare(b.nombre));
+            const filteredGlobalSearch = useMemo(() => {
+                if (!searchQuery) return [];
+                return sortedInventory.filter(p => 
+                    String(p.nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    String(p.codigo || '').includes(searchQuery)
+                );
+            }, [sortedInventory, searchQuery]);
 
             return (
                 <div className="min-h-screen flex flex-col md:flex-row relative">
@@ -746,7 +746,7 @@
                                                                 onMouseDown={(e) => e.preventDefault()} 
                                                                 onClick={() => {
                                                                     setVSelectedId(p.id);
-                                                                    setVSearchTerm(`${p.codigo} - ${p.nombre}`); // Mostrar en input
+                                                                    setVSearchTerm(`${p.codigo} - ${p.nombre}`); 
                                                                     setVShowDropdown(false);
                                                                 }}
                                                                 className={`p-4 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-blue-50 transition-colors flex justify-between items-center ${p.stock <= 0 ? 'opacity-50 bg-red-50' : ''}`}
@@ -957,7 +957,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {inventory.sort((a,b) => a.nombre.localeCompare(b.nombre)).map(p => (
+                                                    {sortedInventory.map(p => (
                                                         <tr key={p.id}>
                                                             <td className="px-6 py-5 font-mono text-slate-400 text-xs font-bold">{p.codigo}</td>
                                                             <td className="px-6 py-5 font-black uppercase text-slate-800 tracking-tight">{p.nombre}</td>
