@@ -580,26 +580,38 @@
 
 
             // ==========================================
-            // EXPORTAR HISTORIAL A CSV
+            // EXPORTAR HISTORIAL A CSV (FECHA Y HORA SEPARADAS)
             // ==========================================
             const handleExportCSV = () => {
                 if (sales.length === 0) {
                     return addToast("No hay datos de ventas para exportar.", "error");
                 }
 
-                // 1. Crear las cabeceras del CSV
-                const headers = ["Fecha y Hora", "Articulo Vendido", "Cantidad", "Monto Bruto (Gs)", "Utilidad Neta (Gs)"];
-
+                // 1. Crear las cabeceras del CSV (Separamos Fecha y Hora en dos columnas)
+                const headers = ["Fecha", "Hora", "Articulo Vendido", "Cantidad", "Monto Bruto (Gs)", "Utilidad Neta (Gs)"];
+                
                 // 2. Mapear los datos de las ventas
                 const csvRows = sales.map(s => {
-                    // Envolvemos en comillas y limpiamos para evitar que Excel se confunda si un nombre tiene comas
-                    const fecha = `"${s.timestamp || ''}"`;
+                    let fechaStr = `""`;
+                    let horaStr = `""`;
+                    
+                    // Extraemos la fecha y la hora por separado usando el objeto real (rawDate)
+                    if (s.rawDate && s.rawDate.getTime() !== 0) {
+                        fechaStr = `"${s.rawDate.toLocaleDateString()}"`;
+                        horaStr = `"${s.rawDate.toLocaleTimeString()}"`;
+                    } else {
+                        fechaStr = `"Pendiente"`;
+                        horaStr = `"Pendiente"`;
+                    }
+
+                    // Envolvemos en comillas y limpiamos para evitar que Excel se confunda
                     const producto = `"${(s.producto || '').replace(/"/g, '""')}"`;
                     const cantidad = s.cantidad || 0;
                     const total = s.total || 0;
                     const ganancia = s.ganancia || 0;
-
-                    return [fecha, producto, cantidad, total, ganancia].join(",");
+                    
+                    // Unimos las 6 columnas ahora
+                    return [fechaStr, horaStr, producto, cantidad, total, ganancia].join(",");
                 });
 
                 // 3. Unir todo con saltos de línea
@@ -609,7 +621,7 @@
                 // El "\uFEFF" asegura que Excel lea los acentos (UTF-8) correctamente
                 const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
                 const url = URL.createObjectURL(blob);
-
+                
                 // 5. Crear un enlace invisible, hacer clic en él y borrarlo
                 const link = document.createElement("a");
                 const fechaHoy = new Date().toLocaleDateString().replace(/\//g, '-');
@@ -618,8 +630,8 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
-                addToast("Historial exportado correctamente a Excel.", "success");
+                
+                addToast("Historial exportado a Excel exitosamente.", "success");
             };
 
 
