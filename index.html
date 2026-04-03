@@ -321,12 +321,48 @@
             const [toasts, setToasts] = useState([]);
 
             // ------------------------------------------
-            // ESTADOS DE SEGURIDAD (LOGIN)
+            // SEGURIDAD PRO: PERSISTENCIA Y TEMPORIZADOR
             // ------------------------------------------
-            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('ferreteria_auth') === 'true');
+            const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('ferreteria_role') || '');
+            
             const [loginUser, setLoginUser] = useState('');
             const [loginPass, setLoginPass] = useState('');
             const [loginError, setLoginError] = useState(false);
+            const timerRef = useRef(null);
+
+            // Función para cerrar sesión (Limpiar todo)
+            const handleLogout = () => {
+                localStorage.removeItem('ferreteria_auth');
+                localStorage.removeItem('ferreteria_role');
+                setIsAuthenticated(false);
+                setCurrentUserRole('');
+                if (timerRef.current) clearTimeout(timerRef.current);
+                addToast("Sesión cerrada correctamente.", "info");
+            };
+
+            // Lógica de Inactividad (30 Minutos)
+            const resetInactivityTimer = () => {
+                if (timerRef.current) clearTimeout(timerRef.current);
+                // 1.800.000 ms = 30 minutos
+                timerRef.current = setTimeout(() => {
+                    handleLogout();
+                    addToast("Sesión cerrada por inactividad.", "error");
+                }, 1800000);
+            };
+
+            useEffect(() => {
+                if (isAuthenticated) {
+                    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+                    events.forEach(event => document.addEventListener(event, resetInactivityTimer));
+                    resetInactivityTimer(); 
+
+                    return () => {
+                        events.forEach(event => document.removeEventListener(event, resetInactivityTimer));
+                        if (timerRef.current) clearTimeout(timerRef.current);
+                    };
+                }
+            }, [isAuthenticated]);
 
             // ------------------------------------------
             // ESTADOS DE USUARIOS Y ROLES
@@ -435,16 +471,20 @@
             // ==========================================
             const handleLogin = async (e) => {
                 e.preventDefault();
-
-                // 1. Tu usuario maestro (siempre funcionará como llave maestra)
+                
+                // 1. Usuario maestro
                 if (loginUser === "admin" && loginPass === "ferreteria123") {
+                    // ESTO ES LO NUEVO: Guarda en la memoria del navegador
+                    localStorage.setItem('ferreteria_auth', 'true');
+                    localStorage.setItem('ferreteria_role', 'admin');
+                    
                     setIsAuthenticated(true);
                     setCurrentUserRole("admin");
                     setLoginError(false);
                     return;
                 }
 
-                // 2. Buscar si es un vendedor creado en la base de datos
+                // 2. Vendedores de la base de datos
                 try {
                     const snapshot = await db.collection("usuarios")
                         .where("username", "==", loginUser.trim())
@@ -453,6 +493,11 @@
 
                     if (!snapshot.empty) {
                         const userData = snapshot.docs[0].data();
+                        
+                        // ESTO ES LO NUEVO: Guarda en la memoria del navegador
+                        localStorage.setItem('ferreteria_auth', 'true');
+                        localStorage.setItem('ferreteria_role', userData.role || "vendedor");
+
                         setIsAuthenticated(true);
                         setCurrentUserRole(userData.role || "vendedor");
                         setLoginError(false);
@@ -912,7 +957,19 @@
                                 </>
                             )}
                         </nav>
+                        <div className="mt-auto pt-4 border-t border-slate-700/30">
+                             <button 
+                                onClick={handleLogout}
+                                className="w-full flex items-center justify-center gap-2 p-3 mb-4 rounded-xl text-red-400 hover:bg-red-500/10 font-bold transition-all text-sm uppercase tracking-widest border border-red-500/20"
+                             >
+                                <i className="fas fa-sign-out-alt"></i> Cerrar Sesión
+                             </button>
 
+                             <div className={`flex items-center justify-center gap-3 text-xs font-black p-4 rounded-2xl bg-slate-900/50 ${loading ? 'text-yellow-500' : 'text-emerald-400'}`}>
+                                <span className={`w-2.5 h-2.5 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'}`}></span>
+                                {loading ? 'Sincronizando Nube...' : 'Sistema Conectado'}
+                             </div>
+                        </div>
                         <div className="mt-auto pt-8 border-t border-slate-700/50">
                             <div className={`flex items-center justify-center gap-3 text-xs font-black p-4 rounded-2xl bg-slate-900/50 ${loading ? 'text-yellow-500' : 'text-emerald-400'}`}>
                                 <span className={`w-2.5 h-2.5 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'}`}></span>
