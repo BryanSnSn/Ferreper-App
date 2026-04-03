@@ -321,6 +321,14 @@
             const [toasts, setToasts] = useState([]);
 
             // ------------------------------------------
+            // ESTADOS DE SEGURIDAD (LOGIN)
+            // ------------------------------------------
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [loginUser, setLoginUser] = useState('');
+            const [loginPass, setLoginPass] = useState('');
+            const [loginError, setLoginError] = useState(false);
+
+            // ------------------------------------------
             // ESTADOS DE BASE DE DATOS
             // ------------------------------------------
             const [inventory, setInventory] = useState([]);
@@ -403,6 +411,24 @@
                     unsubSales();
                 };
             }, []);
+
+            // ==========================================
+            // LÓGICA DE ACCESO (LOGIN)
+            // ==========================================
+            const handleLogin = (e) => {
+                e.preventDefault();
+                // Aquí defines tu usuario y contraseña (puedes cambiarlos por los que quieras)
+                const USUARIO_CORRECTO = "admin";
+                const PASS_CORRECTA = "ferreteria123";
+
+                if (loginUser === USUARIO_CORRECTO && loginPass === PASS_CORRECTA) {
+                    setIsAuthenticated(true);
+                    setLoginError(false);
+                } else {
+                    setLoginError(true);
+                    setLoginPass(''); // Borra la contraseña si se equivoca
+                }
+            };
 
             // ==========================================
             // UTILIDADES Y FORMATEO
@@ -589,12 +615,12 @@
 
                 // 1. Crear las cabeceras del CSV (Separamos Fecha y Hora en dos columnas)
                 const headers = ["Fecha", "Hora", "Articulo Vendido", "Cantidad", "Monto Bruto (Gs)", "Utilidad Neta (Gs)"];
-                
+
                 // 2. Mapear los datos de las ventas
                 const csvRows = sales.map(s => {
                     let fechaStr = `""`;
                     let horaStr = `""`;
-                    
+
                     // Extraemos la fecha y la hora por separado usando el objeto real (rawDate)
                     if (s.rawDate && s.rawDate.getTime() !== 0) {
                         fechaStr = `"${s.rawDate.toLocaleDateString()}"`;
@@ -609,7 +635,7 @@
                     const cantidad = s.cantidad || 0;
                     const total = s.total || 0;
                     const ganancia = s.ganancia || 0;
-                    
+
                     // Unimos las 6 columnas ahora
                     return [fechaStr, horaStr, producto, cantidad, total, ganancia].join(",");
                 });
@@ -621,7 +647,7 @@
                 // El "\uFEFF" asegura que Excel lea los acentos (UTF-8) correctamente
                 const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
                 const url = URL.createObjectURL(blob);
-                
+
                 // 5. Crear un enlace invisible, hacer clic en él y borrarlo
                 const link = document.createElement("a");
                 const fechaHoy = new Date().toLocaleDateString().replace(/\//g, '-');
@@ -630,7 +656,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                
+
                 addToast("Historial exportado a Excel exitosamente.", "success");
             };
 
@@ -719,6 +745,56 @@
                     String(p.codigo || '').includes(searchQuery)
                 );
             }, [sortedInventory, searchQuery]);
+
+            // ==========================================
+            // PANTALLA DE BLOQUEO (SI NO ESTÁ LOGUEADO)
+            // ==========================================
+            if (!isAuthenticated) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 relative overflow-hidden">
+                        {/* Decoración de fondo */}
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-emerald-500"></div>
+                        <i className="fas fa-hammer absolute text-[300px] text-white/5 -bottom-10 -right-10 transform -rotate-45 pointer-events-none"></i>
+
+                        <div className="max-w-md w-full bg-white p-10 rounded-[3rem] shadow-2xl relative z-10 border border-slate-100">
+                            <div className="text-center mb-10">
+                                <div className="bg-blue-600 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/30 transform rotate-3">
+                                    <i className="fas fa-lock text-white text-3xl transform -rotate-3"></i>
+                                </div>
+                                <h2 className="text-4xl font-black text-slate-800 tracking-tight">Acceso Privado</h2>
+                                <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mt-3">Sistema de Gestión Pro</p>
+                            </div>
+
+                            <form onSubmit={handleLogin} className="space-y-6">
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 block ml-2">Usuario</label>
+                                    <div className="relative">
+                                        <i className="fas fa-user absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                        <input type="text" value={loginUser} onChange={e => setLoginUser(e.target.value)} className="input-standard pl-14 font-bold text-slate-700" placeholder="Ingrese su usuario" required autoFocus />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 block ml-2">Contraseña</label>
+                                    <div className="relative">
+                                        <i className="fas fa-key absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                        <input type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} className="input-standard pl-14 font-bold text-slate-700 tracking-widest" placeholder="••••••••" required />
+                                    </div>
+                                </div>
+
+                                {loginError && (
+                                    <div className="bg-red-50 text-red-500 p-3 rounded-xl text-xs font-black uppercase tracking-widest text-center border border-red-100 animate-pulse">
+                                        <i className="fas fa-exclamation-triangle mr-2"></i> Credenciales incorrectas
+                                    </div>
+                                )}
+
+                                <button type="submit" className="w-full btn-primary py-5 text-lg mt-4 shadow-blue-500/20">
+                                    INGRESAR AL SISTEMA
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="min-h-screen flex flex-col md:flex-row relative">
