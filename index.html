@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FerrePer Web</title>
-    
+
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore-compat.js"></script>
 
@@ -24,9 +25,9 @@
             --bg: #f8f8f8;
         }
 
-        body { 
-            margin: 0; 
-            background-color: var(--bg); 
+        body {
+            margin: 0;
+            background-color: var(--bg);
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
@@ -34,10 +35,10 @@
         /* ------------------------------------------- */
         /* DISEÑO DEL SIDEBAR (MENÚ LATERAL)           */
         /* ------------------------------------------- */
-        .sidebar { 
-            background-color: var(--dark); 
+        .sidebar {
+            background-color: var(--dark);
             min-height: 100vh;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
         }
 
         .nav-link {
@@ -61,9 +62,9 @@
             transform: translateX(4px);
         }
 
-        .tab-active { 
-            background-color: var(--primary); 
-            color: white !important; 
+        .tab-active {
+            background-color: var(--primary);
+            color: white !important;
             box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
             transform: scale(1.02);
         }
@@ -80,7 +81,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .search-card:hover {
@@ -118,8 +119,13 @@
             z-index: 10;
         }
 
-        .custom-table th:first-child { border-top-left-radius: 1rem; }
-        .custom-table th:last-child { border-top-right-radius: 1rem; }
+        .custom-table th:first-child {
+            border-top-left-radius: 1rem;
+        }
+
+        .custom-table th:last-child {
+            border-top-right-radius: 1rem;
+        }
 
         .custom-table tr {
             transition: all 0.2s ease;
@@ -201,26 +207,62 @@
         /* ------------------------------------------- */
         /* UTILIDADES (SCROLL & ANIMACIONES)           */
         /* ------------------------------------------- */
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
 
         @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
+
         @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
         }
-        .toast-enter { animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        .toast-exit { animation: fadeOut 0.4s ease forwards; }
+
+        .toast-enter {
+            animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .toast-exit {
+            animation: fadeOut 0.4s ease forwards;
+        }
 
         /* Custom Dropdown Scrollbar for Autocomplete */
-        .custom-dropdown-scroll::-webkit-scrollbar { width: 8px; }
-        .custom-dropdown-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
-        .custom-dropdown-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 8px; }
+        .custom-dropdown-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-dropdown-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .custom-dropdown-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 8px;
+        }
     </style>
 </head>
+
 <body>
     <div id="root"></div>
 
@@ -236,7 +278,7 @@
             messagingSenderId: "802919956457",
             appId: "1:802919956457:web:e9b11593e41c62b30d1578"
         };
-        
+
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -277,7 +319,7 @@
             const [activeTab, setActiveTab] = useState('vender');
             const [loading, setLoading] = useState(true);
             const [toasts, setToasts] = useState([]);
-            
+
             // ------------------------------------------
             // ESTADOS DE BASE DE DATOS
             // ------------------------------------------
@@ -299,9 +341,9 @@
             // ------------------------------------------
             // ESTADOS: FORMULARIO DE VENTA (AUTOCOMPLETE)
             // ------------------------------------------
-            const [vSearchTerm, setVSearchTerm] = useState(''); 
-            const [vSelectedId, setVSelectedId] = useState(''); 
-            const [vShowDropdown, setVShowDropdown] = useState(false); 
+            const [vSearchTerm, setVSearchTerm] = useState('');
+            const [vSelectedId, setVSelectedId] = useState('');
+            const [vShowDropdown, setVShowDropdown] = useState(false);
             const [vQty, setVQty] = useState(1);
 
             // ------------------------------------------
@@ -344,8 +386,8 @@
                     .onSnapshot(snap => {
                         const data = snap.docs.map(doc => {
                             const dateObj = doc.data().fecha?.toDate();
-                            return { 
-                                id: doc.id, 
+                            return {
+                                id: doc.id,
                                 ...doc.data(),
                                 timestamp: dateObj ? dateObj.toLocaleString() : 'Procesando Fecha...',
                                 rawDate: dateObj || new Date(0)
@@ -356,9 +398,9 @@
                         addToast("Error de conexión: No se pudo cargar el historial", "error");
                     });
 
-                return () => { 
-                    unsubInv(); 
-                    unsubSales(); 
+                return () => {
+                    unsubInv();
+                    unsubSales();
                 };
             }, []);
 
@@ -366,10 +408,10 @@
             // UTILIDADES Y FORMATEO
             // ==========================================
             const formatGs = (val) => {
-                return new Intl.NumberFormat('es-PY', { 
-                    style: 'currency', 
+                return new Intl.NumberFormat('es-PY', {
+                    style: 'currency',
                     currency: 'PYG',
-                    maximumFractionDigits: 0 
+                    maximumFractionDigits: 0
                 }).format(val || 0).replace('PYG', 'Gs.');
             };
 
@@ -411,7 +453,7 @@
             // ==========================================
             const salesHoy = useMemo(() => {
                 const inicioDia = new Date();
-                inicioDia.setHours(0, 0, 0, 0); 
+                inicioDia.setHours(0, 0, 0, 0);
                 return sales.filter(s => s.rawDate >= inicioDia);
             }, [sales]);
 
@@ -427,7 +469,7 @@
             // ==========================================
             const resetForm = () => {
                 setEditId(null);
-                setFCodigo(''); 
+                setFCodigo('');
                 setFNombre('');
                 setFCategoria('');
                 setFStock('');
@@ -437,7 +479,7 @@
 
             const handleSaveProduct = async (e) => {
                 e.preventDefault();
-                
+
                 // CANDADO
                 if (isSavingProductRef.current) return;
                 isSavingProductRef.current = true;
@@ -474,7 +516,7 @@
 
             const handleEditEntry = (p) => {
                 setEditId(p.id);
-                setFCodigo(p.codigo || ''); 
+                setFCodigo(p.codigo || '');
                 setFNombre(p.nombre || '');
                 setFCategoria(p.categoria || '');
                 setFStock(p.stock || 0);
@@ -498,10 +540,10 @@
             const handleBulkUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 addToast("Analizando archivo CSV...", "info");
                 const reader = new FileReader();
-                
+
                 reader.onload = async (evt) => {
                     try {
                         const lines = evt.target.result.split('\n');
@@ -510,7 +552,7 @@
 
                         let count = 0;
                         lines.slice(1).forEach(line => {
-                            if (!line.trim()) return; 
+                            if (!line.trim()) return;
                             const cols = line.split(separator);
                             if (cols.length >= 5) {
                                 const ref = db.collection('productos').doc();
@@ -525,10 +567,10 @@
                                 count++;
                             }
                         });
-                        
+
                         await batch.commit();
                         addToast(`Importación exitosa: Se añadieron ${count} artículos.`, "success");
-                        e.target.value = null; 
+                        e.target.value = null;
                     } catch (err) {
                         addToast("Error al procesar el archivo. Verifique el formato.", "error");
                     }
@@ -536,13 +578,58 @@
                 reader.readAsText(file);
             };
 
+
+            // ==========================================
+            // EXPORTAR HISTORIAL A CSV
+            // ==========================================
+            const handleExportCSV = () => {
+                if (sales.length === 0) {
+                    return addToast("No hay datos de ventas para exportar.", "error");
+                }
+
+                // 1. Crear las cabeceras del CSV
+                const headers = ["Fecha y Hora", "Articulo Vendido", "Cantidad", "Monto Bruto (Gs)", "Utilidad Neta (Gs)"];
+
+                // 2. Mapear los datos de las ventas
+                const csvRows = sales.map(s => {
+                    // Envolvemos en comillas y limpiamos para evitar que Excel se confunda si un nombre tiene comas
+                    const fecha = `"${s.timestamp || ''}"`;
+                    const producto = `"${(s.producto || '').replace(/"/g, '""')}"`;
+                    const cantidad = s.cantidad || 0;
+                    const total = s.total || 0;
+                    const ganancia = s.ganancia || 0;
+
+                    return [fecha, producto, cantidad, total, ganancia].join(",");
+                });
+
+                // 3. Unir todo con saltos de línea
+                const csvContent = [headers.join(","), ...csvRows].join("\n");
+
+                // 4. Crear el archivo descargable (Blob)
+                // El "\uFEFF" asegura que Excel lea los acentos (UTF-8) correctamente
+                const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+
+                // 5. Crear un enlace invisible, hacer clic en él y borrarlo
+                const link = document.createElement("a");
+                const fechaHoy = new Date().toLocaleDateString().replace(/\//g, '-');
+                link.setAttribute("href", url);
+                link.setAttribute("download", `Historial_Ventas_${fechaHoy}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                addToast("Historial exportado correctamente a Excel.", "success");
+            };
+
+
             // ==========================================
             // LÓGICA DE AUTOCOMPLETADO PARA VENTAS
             // ==========================================
             const filteredAutocomplete = useMemo(() => {
-                if (!vSearchTerm) return []; 
-                return sortedInventory.filter(p => 
-                    String(p.nombre || '').toLowerCase().includes(vSearchTerm.toLowerCase()) || 
+                if (!vSearchTerm) return [];
+                return sortedInventory.filter(p =>
+                    String(p.nombre || '').toLowerCase().includes(vSearchTerm.toLowerCase()) ||
                     String(p.codigo || '').includes(vSearchTerm)
                 );
             }, [sortedInventory, vSearchTerm]);
@@ -552,17 +639,17 @@
             // ==========================================
             const handleProcessSale = async (e) => {
                 e.preventDefault();
-                
+
                 // 1. CANDADO
                 if (isProcessingSaleRef.current) return;
-                
+
                 // 2. VALIDACIONES
                 if (!vSelectedId) {
                     return addToast("Por favor, seleccione un producto de la lista desplegable.", "error");
                 }
                 const prod = inventory.find(x => x.id === vSelectedId);
                 const quantity = parseInt(vQty);
-                
+
                 if (!prod) {
                     return addToast("El producto seleccionado no existe.", "error");
                 }
@@ -577,7 +664,7 @@
                 try {
                     // 4. TRANSACCIÓN ATÓMICA DE FIREBASE (BATCH)
                     const batch = db.batch();
-                    const ventaRef = db.collection("ventas").doc(); 
+                    const ventaRef = db.collection("ventas").doc();
                     const prodRef = db.collection("productos").doc(vSelectedId);
 
                     batch.set(ventaRef, {
@@ -593,13 +680,13 @@
                     });
 
                     await batch.commit();
-                    
+
                     // 5. LIMPIEZA POST-VENTA
                     addToast(`Venta Registrada: ${prod.nombre} (x${quantity})`, "success");
                     setVSelectedId('');
-                    setVSearchTerm(''); 
+                    setVSearchTerm('');
                     setVQty(1);
-                    
+
                 } catch (err) {
                     console.error("Error en Batch:", err);
                     addToast("Error crítico al registrar la venta. Intente nuevamente.", "error");
@@ -615,15 +702,15 @@
             // ==========================================
             const filteredGlobalSearch = useMemo(() => {
                 if (!searchQuery) return [];
-                return sortedInventory.filter(p => 
-                    String(p.nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                return sortedInventory.filter(p =>
+                    String(p.nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                     String(p.codigo || '').includes(searchQuery)
                 );
             }, [sortedInventory, searchQuery]);
 
             return (
                 <div className="min-h-screen flex flex-col md:flex-row relative">
-                    
+
                     {/* =========================================
                         CONTENEDOR DE NOTIFICACIONES (TOASTS)
                     ========================================= */}
@@ -643,36 +730,36 @@
                             </div>
                             <span className="tracking-tight">FerreWeb </span>
                         </div>
-                        
+
                         <nav className="space-y-2 flex-1">
                             <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-4 mb-4">Caja & Reportes</p>
-                            <button onClick={() => setActiveTab('vender')} className={`nav-link ${activeTab==='vender' ? 'tab-active' : ''}`}>
-                                <i className="fas fa-cash-register w-6 text-center text-lg"></i> 
+                            <button onClick={() => setActiveTab('vender')} className={`nav-link ${activeTab === 'vender' ? 'tab-active' : ''}`}>
+                                <i className="fas fa-cash-register w-6 text-center text-lg"></i>
                                 <span>Venta</span>
                             </button>
-                            <button onClick={() => setActiveTab('historial')} className={`nav-link ${activeTab==='historial' ? 'tab-active' : ''}`}>
-                                <i className="fas fa-chart-line w-6 text-center text-lg"></i> 
+                            <button onClick={() => setActiveTab('historial')} className={`nav-link ${activeTab === 'historial' ? 'tab-active' : ''}`}>
+                                <i className="fas fa-chart-line w-6 text-center text-lg"></i>
                                 <span>Histórico</span>
                             </button>
-                            
+
                             <div className="my-6 border-b border-slate-800"></div>
 
                             <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-4 mb-4">Logística</p>
-                            <button onClick={() => setActiveTab('inventario')} className={`nav-link ${activeTab==='inventario' ? 'tab-active' : ''}`}>
-                                <i className="fas fa-boxes-stacked w-6 text-center text-lg"></i> 
+                            <button onClick={() => setActiveTab('inventario')} className={`nav-link ${activeTab === 'inventario' ? 'tab-active' : ''}`}>
+                                <i className="fas fa-boxes-stacked w-6 text-center text-lg"></i>
                                 <span>Inventario</span>
                             </button>
-                            <button onClick={() => setActiveTab('buscador')} className={`nav-link ${activeTab==='buscador' ? 'tab-active' : ''}`}>
-                                <i className="fas fa-search w-6 text-center text-lg"></i> 
+                            <button onClick={() => setActiveTab('buscador')} className={`nav-link ${activeTab === 'buscador' ? 'tab-active' : ''}`}>
+                                <i className="fas fa-search w-6 text-center text-lg"></i>
                                 <span>Buscador</span>
                             </button>
                         </nav>
 
                         <div className="mt-auto pt-8 border-t border-slate-700/50">
-                             <div className={`flex items-center justify-center gap-3 text-xs font-black p-4 rounded-2xl bg-slate-900/50 ${loading ? 'text-yellow-500' : 'text-emerald-400'}`}>
+                            <div className={`flex items-center justify-center gap-3 text-xs font-black p-4 rounded-2xl bg-slate-900/50 ${loading ? 'text-yellow-500' : 'text-emerald-400'}`}>
                                 <span className={`w-2.5 h-2.5 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'}`}></span>
                                 {loading ? 'Sincronizando Nube...' : 'Sistema Conectado'}
-                             </div>
+                            </div>
                         </div>
                     </aside>
 
@@ -681,7 +768,7 @@
                     ========================================= */}
                     <main className="flex-1 p-6 md:p-10 overflow-y-auto hide-scroll">
                         <div className="max-w-7xl mx-auto">
-                            
+
                             {/* --------------------------------------
                                 PESTAÑA: CIERRE DE CAJA (VENTAS)
                             --------------------------------------- */}
@@ -709,19 +796,19 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     {/* FORMULARIO DE VENTA CON AUTOCOMPLETADO */}
                                     <form onSubmit={handleProcessSale} className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-xl flex flex-col md:flex-row gap-6 items-start relative overflow-visible">
                                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-[2.5rem]"></div>
-                                        
+
                                         <div className="flex-1 w-full relative">
                                             <label className="text-xs font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Buscador de Artículos</label>
-                                            
+
                                             {/* Input Autocompletable */}
                                             <div className="relative">
                                                 <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                                                <input 
-                                                    type="text" 
+                                                <input
+                                                    type="text"
                                                     placeholder="Escriba nombre o código del producto..."
                                                     value={vSearchTerm}
                                                     onChange={(e) => {
@@ -741,12 +828,12 @@
                                                         <div className="p-4 text-center text-slate-500 font-bold italic">No se encontraron productos...</div>
                                                     ) : (
                                                         filteredAutocomplete.map(p => (
-                                                            <div 
+                                                            <div
                                                                 key={p.id}
-                                                                onMouseDown={(e) => e.preventDefault()} 
+                                                                onMouseDown={(e) => e.preventDefault()}
                                                                 onClick={() => {
                                                                     setVSelectedId(p.id);
-                                                                    setVSearchTerm(`${p.codigo} - ${p.nombre}`); 
+                                                                    setVSearchTerm(`${p.codigo} - ${p.nombre}`);
                                                                     setVShowDropdown(false);
                                                                 }}
                                                                 className={`p-4 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-blue-50 transition-colors flex justify-between items-center ${p.stock <= 0 ? 'opacity-50 bg-red-50' : ''}`}
@@ -775,8 +862,8 @@
                                             <input type="number" min="1" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" />
                                         </div>
 
-                                        <button 
-                                            disabled={uiProcessingSale || !vSelectedId} 
+                                        <button
+                                            disabled={uiProcessingSale || !vSelectedId}
                                             className="w-full md:w-auto btn-primary py-5 px-12 text-lg disabled:opacity-50"
                                         >
                                             {uiProcessingSale ? (
@@ -835,10 +922,20 @@
                             --------------------------------------- */}
                             {activeTab === 'historial' && (
                                 <div className="space-y-8 animate-in slide-in-from-right duration-500">
-                                    <header className="mb-10">
-                                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Historial General</h2>
-                                        <p className="text-slate-500 font-medium mt-1">Registro inmutable de todas las operaciones de venta históricas</p>
-                                    </header>
+                                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+                                        <header>
+                                            <h2 className="text-4xl font-black text-slate-900 tracking-tight">Historial General</h2>
+                                            <p className="text-slate-500 font-medium mt-1">Registro inmutable de todas las operaciones de venta históricas</p>
+                                        </header>
+
+                                        <button
+                                            onClick={handleExportCSV}
+                                            className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer hover:bg-emerald-700 flex items-center gap-3 shadow-xl shadow-emerald-900/10 transition-all active:scale-95 border border-emerald-500"
+                                        >
+                                            <i className="fas fa-file-export text-xl text-emerald-100"></i>
+                                            Descargar Excel
+                                        </button>
+                                    </div>
 
                                     <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-xl">
                                         <div className="overflow-x-auto hide-scroll">
@@ -879,7 +976,7 @@
                                             <h2 className="text-4xl font-black text-slate-900 tracking-tight">Base de Inventario</h2>
                                             <p className="text-slate-500 font-medium mt-1">Añada, edite y controle su catálogo de productos</p>
                                         </header>
-                                        
+
                                         <label className="bg-slate-800 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer hover:bg-slate-900 flex items-center gap-3 shadow-xl transition-all active:scale-95 border border-slate-700">
                                             <i className="fas fa-file-import text-xl text-emerald-400"></i>
                                             Subir Excel (CSV)
@@ -890,14 +987,14 @@
                                     {/* Formulario de Alta de Inventario */}
                                     <form onSubmit={handleSaveProduct} className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl grid grid-cols-1 md:grid-cols-6 gap-6 items-end relative overflow-hidden">
                                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-slate-800 to-slate-600 rounded-t-[3rem]"></div>
-                                        
+
                                         <div className="md:col-span-1">
                                             <label className="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Código Auto</label>
-                                            <input 
-                                                type="text" 
-                                                value={editId ? fCodigo : generateNextCode()} 
-                                                disabled 
-                                                className="input-standard input-disabled font-mono text-center tracking-widest font-black" 
+                                            <input
+                                                type="text"
+                                                value={editId ? fCodigo : generateNextCode()}
+                                                disabled
+                                                className="input-standard input-disabled font-mono text-center tracking-widest font-black"
                                             />
                                         </div>
                                         <div className="md:col-span-2">
@@ -928,7 +1025,7 @@
                                                 <input required type="number" value={fVenta} onChange={e => setFVenta(e.target.value)} className="input-standard pl-12 font-black text-blue-600 bg-blue-50/30 border-blue-200 focus:border-blue-600" />
                                             </div>
                                         </div>
-                                        
+
                                         <div className="md:col-span-2 flex gap-3 pt-4">
                                             <button disabled={uiSavingProduct} className="btn-primary flex-1 tracking-widest text-xs">
                                                 {uiSavingProduct ? 'GUARDANDO...' : editId ? '💾 ACTUALIZAR FICHA' : ' CARGAR AL SISTEMA'}
@@ -998,17 +1095,17 @@
                                         <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-4">Catálogo Digital</h2>
                                         <p className="text-slate-500 font-bold uppercase text-xs tracking-[0.4em]">Búsqueda ultra-rápida de productos y precios</p>
                                     </div>
-                                    
+
                                     <div className="relative group mx-auto max-w-4xl">
                                         <div className="absolute inset-y-0 left-0 pl-8 flex items-center pointer-events-none">
                                             <i className="fas fa-search text-slate-300 text-3xl group-focus-within:text-blue-500 transition-colors"></i>
                                         </div>
-                                        <input 
-                                            type="text" 
-                                            placeholder="Escriba el nombre, marca o código..." 
-                                            value={searchQuery} 
-                                            onChange={e => setSearchQuery(e.target.value)} 
-                                            className="w-full p-10 pl-24 text-3xl border-4 border-white rounded-[3rem] outline-none focus:border-blue-500 focus:ring-8 ring-blue-500/20 shadow-2xl transition-all font-black placeholder:text-slate-300 text-slate-800" 
+                                        <input
+                                            type="text"
+                                            placeholder="Escriba el nombre, marca o código..."
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            className="w-full p-10 pl-24 text-3xl border-4 border-white rounded-[3rem] outline-none focus:border-blue-500 focus:ring-8 ring-blue-500/20 shadow-2xl transition-all font-black placeholder:text-slate-300 text-slate-800"
                                         />
                                     </div>
 
@@ -1017,7 +1114,7 @@
                                         {searchQuery && filteredGlobalSearch.map(p => (
                                             <div key={p.id} className="search-card relative overflow-hidden group">
                                                 <div className={`absolute left-0 top-0 bottom-0 w-2 ${p.stock > 0 ? 'bg-emerald-400' : 'bg-red-500'}`}></div>
-                                                
+
                                                 <div className="flex-1 min-w-0 pl-4 pr-6">
                                                     <div className="flex items-center gap-3 mb-2">
                                                         <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border border-slate-200">
@@ -1025,11 +1122,11 @@
                                                         </span>
                                                         <span className="text-slate-400 font-mono text-[10px] font-bold">Ref: {p.codigo}</span>
                                                     </div>
-                                                    
+
                                                     <h4 className="text-2xl font-black text-slate-800 uppercase text-truncate" title={p.nombre}>
                                                         {p.nombre}
                                                     </h4>
-                                                    
+
                                                     <div className="flex items-center gap-2 mt-4">
                                                         <div className={`w-3 h-3 rounded-full ${p.stock > 0 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 'bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]'}`}></div>
                                                         <p className={`text-xs font-black uppercase ${p.stock > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -1037,14 +1134,14 @@
                                                         </p>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="text-right flex-shrink-0 pl-6 border-l-2 border-slate-100 py-2">
                                                     <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Precio Público</p>
                                                     <p className="text-5xl font-black text-blue-600 tracking-tighter leading-none">{formatGs(p.venta)}</p>
                                                 </div>
                                             </div>
                                         ))}
-                                        
+
                                         {!searchQuery && (
                                             <div className="col-span-full py-32 text-center opacity-20 transform scale-90 transition-transform">
                                                 <i className="fas fa-barcode text-[150px] text-slate-500 mb-8"></i>
@@ -1065,4 +1162,5 @@
         root.render(<App />);
     </script>
 </body>
+
 </html>
