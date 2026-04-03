@@ -1073,7 +1073,7 @@
                                                             <td className="px-6 py-5 text-slate-500 font-bold text-xs uppercase">{p.categoria}</td>
                                                             <td className="px-6 py-5 text-center">
                                                                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs border ${p.stock < 5 ? 'bg-red-50 text-red-600 border-red-200 shadow-sm' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
-                                                                    {p.stock < 10 && <i className="fas fa-warning animate-pulse"></i>}
+                                                                    {p.stock <= 10 && <i className="fas fa-warning animate-pulse"></i>}
                                                                     {p.stock} U.
                                                                 </div>
                                                             </td>
