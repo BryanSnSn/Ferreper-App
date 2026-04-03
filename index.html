@@ -329,6 +329,15 @@
             const [loginError, setLoginError] = useState(false);
 
             // ------------------------------------------
+            // ESTADOS DE USUARIOS Y ROLES
+            // ------------------------------------------
+            const [currentUserRole, setCurrentUserRole] = useState('');
+            const [usersList, setUsersList] = useState([]);
+            const [fNewUser, setFNewUser] = useState('');
+            const [fNewPass, setFNewPass] = useState('');
+            const [fNewRole, setFNewRole] = useState('vendedor');
+
+            // ------------------------------------------
             // ESTADOS DE BASE DE DATOS
             // ------------------------------------------
             const [inventory, setInventory] = useState([]);
@@ -412,21 +421,72 @@
                 };
             }, []);
 
-            // ==========================================
-            // LÓGICA DE ACCESO (LOGIN)
-            // ==========================================
-            const handleLogin = (e) => {
-                e.preventDefault();
-                // Aquí defines tu usuario y contraseña (puedes cambiarlos por los que quieras)
-                const USUARIO_CORRECTO = "admin";
-                const PASS_CORRECTA = "ferreteria123";
+            // Sincronizar Base de Datos de Usuarios
+            useEffect(() => {
+                const unsubUsers = db.collection("usuarios").onSnapshot(snap => {
+                    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setUsersList(data);
+                });
+                return () => unsubUsers();
+            }, []);
 
-                if (loginUser === USUARIO_CORRECTO && loginPass === PASS_CORRECTA) {
+            // ==========================================
+            // LÓGICA DE ACCESO (LOGIN) Y USUARIOS
+            // ==========================================
+            const handleLogin = async (e) => {
+                e.preventDefault();
+
+                // 1. Tu usuario maestro (siempre funcionará como llave maestra)
+                if (loginUser === "admin" && loginPass === "ferreteria123") {
                     setIsAuthenticated(true);
+                    setCurrentUserRole("admin");
                     setLoginError(false);
-                } else {
+                    return;
+                }
+
+                // 2. Buscar si es un vendedor creado en la base de datos
+                try {
+                    const snapshot = await db.collection("usuarios")
+                        .where("username", "==", loginUser.trim())
+                        .where("password", "==", loginPass.trim())
+                        .get();
+
+                    if (!snapshot.empty) {
+                        const userData = snapshot.docs[0].data();
+                        setIsAuthenticated(true);
+                        setCurrentUserRole(userData.role || "vendedor");
+                        setLoginError(false);
+                    } else {
+                        setLoginError(true);
+                        setLoginPass('');
+                    }
+                } catch (error) {
                     setLoginError(true);
-                    setLoginPass(''); // Borra la contraseña si se equivoca
+                }
+            };
+
+            const handleCreateUser = async (e) => {
+                e.preventDefault();
+                const exists = usersList.find(u => u.username.toLowerCase() === fNewUser.toLowerCase());
+                if (exists) return addToast("Ese nombre de usuario ya existe.", "error");
+
+                try {
+                    await db.collection("usuarios").add({
+                        username: fNewUser.trim(),
+                        password: fNewPass.trim(),
+                        role: fNewRole
+                    });
+                    addToast("Usuario creado correctamente.", "success");
+                    setFNewUser(''); setFNewPass(''); setFNewRole('vendedor');
+                } catch (err) {
+                    addToast("Error al guardar el usuario.", "error");
+                }
+            };
+
+            const handleDeleteUser = async (id, name) => {
+                if (confirm(`¿Estás seguro de eliminar el acceso a "${name}"?`)) {
+                    await db.collection("usuarios").doc(id).delete();
+                    addToast("Usuario eliminado.", "success");
                 }
             };
 
@@ -841,6 +901,16 @@
                                 <i className="fas fa-search w-6 text-center text-lg"></i>
                                 <span>Buscador</span>
                             </button>
+                            {currentUserRole === 'admin' && (
+                                <>
+                                    <div className="my-6 border-b border-slate-800"></div>
+                                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-4 mb-4">Administración</p>
+                                    <button onClick={() => setActiveTab('usuarios')} className={`nav-link ${activeTab==='usuarios' ? 'tab-active' : ''}`}>
+                                        <i className="fas fa-users-cog w-6 text-center text-lg"></i> 
+                                        <span>Usuarios</span>
+                                    </button>
+                                </>
+                            )}
                         </nav>
 
                         <div className="mt-auto pt-8 border-t border-slate-700/50">
@@ -1239,6 +1309,82 @@
                                     </div>
                                 </div>
                             )}
+                            
+                            
+                            {/* --------------------------------------
+                                VISTA 5: GESTIÓN DE USUARIOS (SOLO ADMIN)
+                            --------------------------------------- */}
+                            {activeTab === 'usuarios' && currentUserRole === 'admin' && (
+                                <div className="space-y-8 animate-in slide-in-from-bottom duration-500 pb-20">
+                                    <header className="mb-10">
+                                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Gestión de Accesos</h2>
+                                        <p className="text-slate-500 font-medium mt-1">Crea cuentas para tus empleados y vendedores</p>
+                                    </header>
+
+                                    {/* Formulario Crear Usuario */}
+                                    <form onSubmit={handleCreateUser} className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-xl grid grid-cols-1 md:grid-cols-4 gap-6 items-end relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+                                        
+                                        <div>
+                                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 block ml-2">Usuario</label>
+                                            <input required type="text" value={fNewUser} onChange={e => setFNewUser(e.target.value)} className="input-standard font-bold text-slate-800" placeholder="Ej. juan_vendedor" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 block ml-2">Contraseña</label>
+                                            <input required type="text" value={fNewPass} onChange={e => setFNewPass(e.target.value)} className="input-standard font-bold text-slate-800" placeholder="Clave de acceso" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 block ml-2">Nivel de Permiso</label>
+                                            <select value={fNewRole} onChange={e => setFNewRole(e.target.value)} className="input-standard font-bold cursor-pointer text-slate-800">
+                                                <option value="vendedor">Vendedor (Básico)</option>
+                                                <option value="admin">Administrador (Total)</option>
+                                            </select>
+                                        </div>
+                                        <button className="btn-primary py-4 text-sm tracking-widest w-full bg-purple-600 hover:bg-purple-700 shadow-purple-500/30">
+                                            <i className="fas fa-user-plus"></i> CREAR CUENTA
+                                        </button>
+                                    </form>
+
+                                    {/* Tabla de Usuarios */}
+                                    <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm mt-8">
+                                        <table className="w-full text-left text-sm custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nombre de Usuario</th>
+                                                    <th>Contraseña (Plana)</th>
+                                                    <th className="text-center">Permisos</th>
+                                                    <th className="text-center">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr className="bg-slate-50 border-b border-slate-100">
+                                                    <td className="px-6 py-5 font-black text-slate-800">admin</td>
+                                                    <td className="px-6 py-5 font-mono text-slate-500">ferreteria123</td>
+                                                    <td className="px-6 py-5 text-center"><span className="bg-slate-800 text-white px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest shadow-md">Maestro</span></td>
+                                                    <td className="px-6 py-5 text-center text-xs font-bold text-slate-400">Protegido</td>
+                                                </tr>
+                                                {usersList.map(u => (
+                                                    <tr key={u.id}>
+                                                        <td className="px-6 py-5 font-black text-slate-800">{u.username}</td>
+                                                        <td className="px-6 py-5 font-mono text-slate-500">{u.password}</td>
+                                                        <td className="px-6 py-5 text-center">
+                                                            <span className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest ${u.role === 'admin' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                                                                {u.role}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-5 text-center">
+                                                            <button onClick={() => handleDeleteUser(u.id, u.username)} className="text-red-500 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 p-3 rounded-xl transition-all shadow-sm">
+                                                                <i className="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                            
 
                         </div>
                     </main>
