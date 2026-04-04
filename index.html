@@ -1027,17 +1027,18 @@
                                     </div>
 
                                     {/* FORMULARIO DE VENTA CON AUTOCOMPLETADO */}
-                                    <form onSubmit={handleProcessSale} className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-xl flex flex-col md:flex-row gap-6 items-start relative overflow-visible">
+                                   {/* FORMULARIO DE VENTA CON AUTOCOMPLETADO */}
+                                    <form onSubmit={handleProcessSale} className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-xl flex flex-col md:flex-row gap-6 items-end relative overflow-visible">
                                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-[2.5rem]"></div>
-
+                                        
                                         <div className="flex-1 w-full relative">
                                             <label className="text-xs font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Buscador de Artículos</label>
-
+                                            
                                             {/* Input Autocompletable */}
                                             <div className="relative">
                                                 <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                                                <input
-                                                    type="text"
+                                                <input 
+                                                    type="text" 
                                                     placeholder="Escriba nombre o código del producto..."
                                                     value={vSearchTerm}
                                                     onChange={(e) => {
@@ -1057,12 +1058,12 @@
                                                         <div className="p-4 text-center text-slate-500 font-bold italic">No se encontraron productos...</div>
                                                     ) : (
                                                         filteredAutocomplete.map(p => (
-                                                            <div
+                                                            <div 
                                                                 key={p.id}
-                                                                onMouseDown={(e) => e.preventDefault()}
+                                                                onMouseDown={(e) => e.preventDefault()} 
                                                                 onClick={() => {
                                                                     setVSelectedId(p.id);
-                                                                    setVSearchTerm(`${p.codigo} - ${p.nombre}`);
+                                                                    setVSearchTerm(`${p.codigo} - ${p.nombre}`); 
                                                                     setVShowDropdown(false);
                                                                 }}
                                                                 className={`p-4 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-blue-50 transition-colors flex justify-between items-center ${p.stock <= 0 ? 'opacity-50 bg-red-50' : ''}`}
@@ -1073,7 +1074,7 @@
                                                                         <span className="font-black text-slate-800 uppercase">{p.nombre}</span>
                                                                     </div>
                                                                     <div className={`text-xs font-bold ${p.stock > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                                        {p.stock > 0 ? `Stock Disponible: ${p.stock}` : 'AGOTADO'}
+                                                                        {p.stock > 0 ? `Stock: ${p.tipoVenta === 'granel' ? Number(p.stock).toFixed(3) + ' Kg/L' : Math.floor(p.stock) + ' U.'}` : 'AGOTADO'}
                                                                     </div>
                                                                 </div>
                                                                 <div className="text-right">
@@ -1086,10 +1087,31 @@
                                             )}
                                         </div>
 
+                                        {/* CAJA DE CANTIDAD / MONTO DINÁMICA */}
+                                        {vSelectedId && inventory.find(p => p.id === vSelectedId)?.tipoVenta === 'granel' ? (
+                                            <div className="w-full md:w-56 flex flex-col">
+                                                <div className="flex justify-between items-center mb-2 px-1">
+                                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cobrar por:</label>
+                                                    <div className="flex gap-1">
+                                                        <button type="button" onClick={() => {setVModoVenta('cantidad'); setVQty(1);}} className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${vModoVenta==='cantidad' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-500'}`}>Medida</button>
+                                                        <button type="button" onClick={() => {setVModoVenta('monto'); setVMontoGs('');}} className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${vModoVenta==='monto' ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>Guaraníes</button>
+                                                    </div>
+                                                </div>
+                                                {vModoVenta === 'cantidad' ? (
+                                                    <input type="number" min="0.001" step="any" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" placeholder="Ej. 1.5" />
+                                                ) : (
+                                                    <input type="number" min="1" required value={vMontoGs} onChange={e => setVMontoGs(e.target.value)} className="input-standard text-2xl font-black text-center text-emerald-600 bg-emerald-50/50 border-emerald-200 focus:border-emerald-500" placeholder="Gs." />
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="w-full md:w-40">
+                                                <label className="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Unidades Enteras</label>
+                                                <input type="number" min="1" step="1" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" />
+                                            </div>
+                                        )}
 
-
-                                        <button
-                                            disabled={uiProcessingSale || !vSelectedId}
+                                        <button 
+                                            disabled={uiProcessingSale || !vSelectedId} 
                                             className="w-full md:w-auto btn-primary py-5 px-12 text-lg disabled:opacity-50"
                                         >
                                             {uiProcessingSale ? (
