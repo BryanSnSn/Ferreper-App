@@ -389,6 +389,9 @@
             const [fStock, setFStock] = useState('');
             const [fCosto, setFCosto] = useState('');
             const [fVenta, setFVenta] = useState('');
+            const [fTipoVenta, setFTipoVenta] = useState('unidad'); // 'unidad' o 'granel'
+            const [vModoVenta, setVModoVenta] = useState('cantidad'); // 'cantidad' o 'monto'
+            const [vMontoGs, setVMontoGs] = useState('');
 
             // ------------------------------------------
             // ESTADOS: FORMULARIO DE VENTA (AUTOCOMPLETE)
@@ -605,6 +608,7 @@
                 setFStock('');
                 setFCosto('');
                 setFVenta('');
+                setFTipoVenta('unidad');
             };
 
             const handleSaveProduct = async (e) => {
@@ -622,7 +626,8 @@
                     codigo: String(finalCodigo).trim(),
                     nombre: String(fNombre).trim(),
                     categoria: String(fCategoria).trim() || 'General',
-                    stock: parseInt(fStock) || 0,
+                    tipoVenta: fTipoVenta, // <--- ESTA ES LA LÍNEA NUEVA
+                    stock: parseFloat(fStock) || 0, // Asegúrate de que diga parseFloat
                     costo: cleanValue(fCosto),
                     venta: cleanValue(fVenta)
                 };
@@ -652,6 +657,7 @@
                 setFStock(p.stock || 0);
                 setFCosto(p.costo || 0);
                 setFVenta(p.venta || 0);
+                setFTipoVenta(p.tipoVenta || 'unidad');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 addToast("Modo edición activado.", "info");
             };
@@ -777,63 +783,77 @@
             }, [sortedInventory, vSearchTerm]);
 
             // ==========================================
-            // LÓGICA DE VENTAS (ANTI-DUPLICADOS + BATCH)
+            // LÓGICA DE VENTAS (ANTI-CAPA 8 + GRANEL)
             // ==========================================
             const handleProcessSale = async (e) => {
                 e.preventDefault();
-
-                // 1. CANDADO
                 if (isProcessingSaleRef.current) return;
 
-                // 2. VALIDACIONES
-                if (!vSelectedId) {
-                    return addToast("Por favor, seleccione un producto de la lista desplegable.", "error");
-                }
+                if (!vSelectedId) return addToast("Por favor, seleccione un producto.", "error");
+
                 const prod = inventory.find(x => x.id === vSelectedId);
-                const quantity = parseInt(vQty);
+                if (!prod) return addToast("El producto seleccionado no existe.", "error");
 
-                if (!prod) {
-                    return addToast("El producto seleccionado no existe.", "error");
-                }
-                if (prod.stock < quantity) {
-                    return addToast(`Stock insuficiente. Quedan ${prod.stock} unidades.`, "error");
+                let finalQty = 0;
+                let totalCobrado = 0;
+
+                // CÁLCULO INTELIGENTE
+                if (prod.tipoVenta === 'granel') {
+                    if (vModoVenta === 'monto') {
+                        const monto = parseFloat(vMontoGs);
+                        if (!monto || monto <= 0) return addToast("Ingrese un monto válido.", "error");
+                        finalQty = monto / prod.venta; // Regla de 3 inversa
+                        totalCobrado = monto;
+                    } else {
+                        finalQty = parseFloat(vQty);
+                        if (!finalQty || finalQty <= 0) return addToast("Cantidad inválida.", "error");
+                        totalCobrado = finalQty * prod.venta;
+                    }
+                } else {
+                    // PROTECCIÓN CAPA 8 (Solo enteros permitidos)
+                    finalQty = parseFloat(vQty);
+                    if (!Number.isInteger(finalQty)) {
+                        return addToast(`Error: "${prod.nombre}" no se puede fraccionar. Ingrese un entero.`, "error");
+                    }
+                    if (!finalQty || finalQty <= 0) return addToast("Cantidad inválida.", "error");
+                    totalCobrado = finalQty * prod.venta;
                 }
 
-                // 3. BLOQUEAR INTERFAZ
+                if (prod.stock < finalQty) {
+                    return addToast(`Stock insuficiente. Quedan ${prod.stock} ${prod.tipoVenta === 'granel' ? 'Kg/L' : 'unidades'}.`, "error");
+                }
+
                 isProcessingSaleRef.current = true;
                 setUiProcessingSale(true);
 
                 try {
-                    // 4. TRANSACCIÓN ATÓMICA DE FIREBASE (BATCH)
                     const batch = db.batch();
                     const ventaRef = db.collection("ventas").doc();
                     const prodRef = db.collection("productos").doc(vSelectedId);
 
                     batch.set(ventaRef, {
                         producto: prod.nombre,
-                        cantidad: quantity,
-                        total: prod.venta * quantity,
-                        ganancia: (prod.venta - prod.costo) * quantity,
+                        cantidad: Number(finalQty.toFixed(3)), // Máximo 3 decimales (Ej. 0.166)
+                        total: totalCobrado,
+                        ganancia: totalCobrado - (prod.costo * finalQty),
                         fecha: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
                     batch.update(prodRef, {
-                        stock: prod.stock - quantity
+                        stock: prod.stock - finalQty
                     });
 
                     await batch.commit();
 
-                    // 5. LIMPIEZA POST-VENTA
-                    addToast(`Venta Registrada: ${prod.nombre} (x${quantity})`, "success");
+                    addToast(`Venta Registrada: ${prod.nombre}`, "success");
                     setVSelectedId('');
                     setVSearchTerm('');
                     setVQty(1);
-
+                    setVMontoGs('');
+                    setVModoVenta('cantidad');
                 } catch (err) {
-                    console.error("Error en Batch:", err);
-                    addToast("Error crítico al registrar la venta. Intente nuevamente.", "error");
+                    addToast("Error al registrar la venta.", "error");
                 } finally {
-                    // 6. LIBERAR CANDADOS
                     isProcessingSaleRef.current = false;
                     setUiProcessingSale(false);
                 }
@@ -1066,10 +1086,28 @@
                                             )}
                                         </div>
 
-                                        <div className="w-full md:w-40">
-                                            <label className="text-xs font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Cantidad</label>
-                                            <input type="number" min="1" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" />
-                                        </div>
+                                        {/* CAJA DE CANTIDAD / MONTO DINÁMICA */}
+                                        {vSelectedId && inventory.find(p => p.id === vSelectedId)?.tipoVenta === 'granel' ? (
+                                            <div className="w-full md:w-56 flex flex-col">
+                                                <div className="flex justify-between items-center mb-2 px-1">
+                                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cobrar por:</label>
+                                                    <div className="flex gap-1">
+                                                        <button type="button" onClick={() => {setVModoVenta('cantidad'); setVQty(1);}} className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${vModoVenta==='cantidad' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-500'}`}>Medida</button>
+                                                        <button type="button" onClick={() => {setVModoVenta('monto'); setVMontoGs('');}} className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${vModoVenta==='monto' ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>Guaraníes</button>
+                                                    </div>
+                                                </div>
+                                                {vModoVenta === 'cantidad' ? (
+                                                    <input type="number" min="0.001" step="any" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" placeholder="Ej. 1.5" />
+                                                ) : (
+                                                    <input type="number" min="1" required value={vMontoGs} onChange={e => setVMontoGs(e.target.value)} className="input-standard text-2xl font-black text-center text-emerald-600 bg-emerald-50/50 border-emerald-200 focus:border-emerald-500" placeholder="Gs." />
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="w-full md:w-40">
+                                                <label className="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Unidades Enteras</label>
+                                                <input type="number" min="1" step="1" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" />
+                                            </div>
+                                        )}
 
                                         <button
                                             disabled={uiProcessingSale || !vSelectedId}
@@ -1218,7 +1256,13 @@
                                             <label className="text-[10px] font-black text-emerald-500 ml-2 uppercase tracking-widest mb-2 block">Stock Físico</label>
                                             <input required type="number" value={fStock} onChange={e => setFStock(e.target.value)} className="input-standard font-black text-center bg-emerald-50/50 border-emerald-100 focus:border-emerald-500" />
                                         </div>
-                                        <div className="md:col-span-1"></div> {/* Spacer */}
+                                        <div className="md:col-span-1">
+                                            <label className="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Tipo Venta</label>
+                                            <select value={fTipoVenta} onChange={e => setFTipoVenta(e.target.value)} className="input-standard font-black text-slate-700 cursor-pointer">
+                                                <option value="unidad">Por Unidad</option>
+                                                <option value="granel">A Granel (Kg/L/m)</option>
+                                            </select>
+                                        </div>
 
                                         <div className="md:col-span-2">
                                             <label className="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Costo Adquisición (Gs)</label>
