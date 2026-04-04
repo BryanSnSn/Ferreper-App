@@ -833,10 +833,10 @@
 
                     batch.set(ventaRef, {
                         producto: prod.nombre,
-                        cantidad: Number(finalQty.toFixed(3)), // Máximo 3 decimales (Ej. 0.166)
+                        cantidad: Number(finalQty.toFixed(3)), // Ya redondeábamos aquí, super bien.
+                        unidad: prod.tipoVenta === 'granel' ? 'Kg' : 'und.', // <--- AÑADIR ESTA LÍNEA MÁGICA
                         total: totalCobrado,
-                        ganancia: totalCobrado - (prod.costo * finalQty),
-                        fecha: firebase.firestore.FieldValue.serverTimestamp()
+                        // ... ganancia, fecha, etc.
                     });
 
                     batch.update(prodRef, {
@@ -1086,28 +1086,7 @@
                                             )}
                                         </div>
 
-                                        {/* CAJA DE CANTIDAD / MONTO DINÁMICA */}
-                                        {vSelectedId && inventory.find(p => p.id === vSelectedId)?.tipoVenta === 'granel' ? (
-                                            <div className="w-full md:w-56 flex flex-col">
-                                                <div className="flex justify-between items-center mb-2 px-1">
-                                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cobrar por:</label>
-                                                    <div className="flex gap-1">
-                                                        <button type="button" onClick={() => {setVModoVenta('cantidad'); setVQty(1);}} className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${vModoVenta==='cantidad' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-500'}`}>Medida</button>
-                                                        <button type="button" onClick={() => {setVModoVenta('monto'); setVMontoGs('');}} className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${vModoVenta==='monto' ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>Guaraníes</button>
-                                                    </div>
-                                                </div>
-                                                {vModoVenta === 'cantidad' ? (
-                                                    <input type="number" min="0.001" step="any" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" placeholder="Ej. 1.5" />
-                                                ) : (
-                                                    <input type="number" min="1" required value={vMontoGs} onChange={e => setVMontoGs(e.target.value)} className="input-standard text-2xl font-black text-center text-emerald-600 bg-emerald-50/50 border-emerald-200 focus:border-emerald-500" placeholder="Gs." />
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="w-full md:w-40">
-                                                <label className="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Unidades Enteras</label>
-                                                <input type="number" min="1" step="1" required value={vQty} onChange={e => setVQty(e.target.value)} className="input-standard text-2xl font-black text-center text-slate-800" />
-                                            </div>
-                                        )}
+
 
                                         <button
                                             disabled={uiProcessingSale || !vSelectedId}
@@ -1150,7 +1129,7 @@
                                                                 <td className="p-6 font-bold text-slate-700 uppercase tracking-tight">{s.producto}</td>
                                                                 <td className="p-6 text-center">
                                                                     <span className="bg-slate-100 px-4 py-2 rounded-lg font-black text-slate-600 border border-slate-200">
-                                                                        x{s.cantidad}
+                                                                        {s.cantidad} {s.unidad || 'und.'} {/* <--- MOSTRAR UNIDAD GUARDADA */}
                                                                     </span>
                                                                 </td>
                                                                 <td className="p-6 text-right font-black text-blue-600 text-2xl tracking-tighter">{formatGs(s.total)}</td>
@@ -1201,7 +1180,9 @@
                                                         <tr key={s.id}>
                                                             <td className="px-6 py-5 text-slate-500 font-mono font-bold text-xs">{s.timestamp}</td>
                                                             <td className="px-6 py-5 font-black uppercase text-slate-800">{s.producto}</td>
-                                                            <td className="px-6 py-5 text-center font-bold text-slate-500">{s.cantidad} und.</td>
+                                                            <td className="px-6 py-5 text-center font-bold text-slate-500">
+                                                                {s.cantidad} {s.unidad || 'und.'} {/* <--- MOSTRAR UNIDAD GUARDADA */}
+                                                            </td>
                                                             <td className="px-6 py-5 text-right font-black text-slate-700 text-lg tracking-tighter">{formatGs(s.total)}</td>
                                                             <td className="px-6 py-5 text-right font-black text-emerald-600 text-lg tracking-tighter">{formatGs(s.ganancia)}</td>
                                                         </tr>
@@ -1313,9 +1294,13 @@
                                                             <td className="px-6 py-5 font-black uppercase text-slate-800 tracking-tight">{p.nombre}</td>
                                                             <td className="px-6 py-5 text-slate-500 font-bold text-xs uppercase">{p.categoria}</td>
                                                             <td className="px-6 py-5 text-center">
-                                                                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs border ${p.stock < 10 ? 'bg-red-50 text-red-600 border-red-200 shadow-sm' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
-                                                                    {p.stock <= 10 && <i className="fas fa-warning animate-pulse"></i>}
-                                                                    {p.stock} U.
+                                                                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs border ${p.stock < (p.tipoVenta === 'granel' ? 1 : 10) ? 'bg-red-50 text-red-600 border-red-200 shadow-sm' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
+                                                                    {p.stock < (p.tipoVenta === 'granel' ? 1 : 10) && <i className="fas fa-warning animate-pulse"></i>}
+
+                                                                    {/* AQUÍ ESTÁ LA CORRECCIÓN: Redondeo a 3 decimales + Unidad dinámica */}
+                                                                    {p.tipoVenta === 'granel' ? Number(p.stock || 0).toFixed(3) : Math.floor(p.stock || 0)}
+                                                                    &nbsp;
+                                                                    {p.tipoVenta === 'granel' ? 'Kg/L' : 'und.'}
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-5 text-right font-bold text-slate-500">{formatGs(p.costo)}</td>
