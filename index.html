@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FerrePer Web</title>
+    <title>FerreMathi Web</title>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -18,11 +18,11 @@
 
     <style>
         :root {
-            --primary: #3f83d0;
-            --primary-hover: #1d4ed8;
+            --primary: #d39d37;
+            --primary-hover: #ab885f;
             --dark: #0f172a;
             --darker: #020617;
-            --bg: #f8f8f8;
+            --bg: #292d3e;
         }
 
         body {
@@ -268,8 +268,11 @@
 
     <script type="text/babel">
         // ==========================================
+
         // 1. CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE
+
         // ==========================================
+
         const firebaseConfig = {
             apiKey: "AIzaSyBbpcyUuv-8BpdN7QXkWLncZ2TXzMe_OFY",
             authDomain: "ferreteria-app-56611.firebaseapp.com",
@@ -277,6 +280,7 @@
             storageBucket: "ferreteria-app-56611.firebasestorage.app",
             messagingSenderId: "802919956457",
             appId: "1:802919956457:web:e9b11593e41c62b30d1578"
+
         };
 
         if (!firebase.apps.length) {
@@ -330,6 +334,48 @@
             const [loginPass, setLoginPass] = useState('');
             const [loginError, setLoginError] = useState(false);
             const timerRef = useRef(null);
+
+            // ==========================================
+            // DESCARGAR EXCEL (CSV) POR MES (CORREGIDO)
+            // ==========================================
+            const handleDownloadMonth = (e, mes, ventasDelMes) => {
+                e.stopPropagation();
+                e.preventDefault();
+
+                // Separamos fecha y hora para mayor claridad contable
+                let csvContent = "Fecha,Hora,Producto,Cantidad,Unidad,Ingreso Bruto (Gs),Utilidad Neta (Gs)\n";
+
+                ventasDelMes.forEach(v => {
+                    let fechaStr = `"Pendiente"`;
+                    let horaStr = `"Pendiente"`;
+
+                    if (v.rawDate && v.rawDate.getTime() !== 0) {
+                        fechaStr = `"${v.rawDate.toLocaleDateString()}"`;
+                        horaStr = `"${v.rawDate.toLocaleTimeString()}"`;
+                    }
+
+                    // Limpiar caracteres raros que puedan romper el Excel
+                    let prodLimpio = `"${(v.producto || 'Desconocido').replace(/"/g, '""')}"`;
+                    let cantidad = v.cantidad || 0;
+                    let unidad = v.unidad || '';
+                    let total = v.total || 0;
+                    let ganancia = v.ganancia || 0;
+
+                    csvContent += `${fechaStr},${horaStr},${prodLimpio},${cantidad},${unidad},${total},${ganancia}\n`;
+                });
+
+                // El \uFEFF fuerza a Excel a leer UTF-8 (acentos y ñ)
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `Ventas_Ferreteria_${mes.replace(/ /g, '_')}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                addToast(`Descargando reporte de ${mes}`, "success");
+            };
 
             // Función para cerrar sesión (Limpiar todo)
             const handleLogout = () => {
@@ -400,7 +446,7 @@
             const [vSelectedId, setVSelectedId] = useState('');
             const [vShowDropdown, setVShowDropdown] = useState(false);
             const [vQty, setVQty] = useState(1);
-
+            const [vHighlightedIndex, setVHighlightedIndex] = useState(-1);
             // ------------------------------------------
             // LOCKS (CANDADOS ANTI-DUPLICADOS)
             // ------------------------------------------
@@ -887,7 +933,7 @@
                                 <div className="bg-blue-600 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/30 transform rotate-3">
                                     <i className="fas fa-lock text-white text-3xl transform -rotate-3"></i>
                                 </div>
-                                <h2 className="text-4xl font-black text-slate-800 tracking-tight">Ferreper Login</h2>
+                                <h2 className="text-4xl font-black text-slate-800 tracking-tight">Login</h2>
                                 <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mt-3">Creado por Bryan Duarte</p>
                             </div>
 
@@ -1028,15 +1074,16 @@
                                         </div>
                                     </div>
 
-                                    {/* FORMULARIO DE VENTA CON AUTOCOMPLETADO */}
-                                    {/* FORMULARIO DE VENTA CON AUTOCOMPLETADO */}
+                                    {/* FORMULARIO DE VENTA CON AUTOCOMPLETADO (TECLADO ACTIVADO) */}
                                     <form onSubmit={handleProcessSale} className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-xl flex flex-col md:flex-row gap-6 items-end relative overflow-visible">
-                                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-[2.5rem]"></div>
+                                        <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+</div>
 
                                         <div className="flex-1 w-full relative">
                                             <label className="text-xs font-black text-slate-500 ml-2 uppercase tracking-widest mb-2 block">Buscador de Artículos</label>
 
-                                            {/* Input Autocompletable */}
+                                            {/* Input Autocompletable con Navegación por Teclado */}
                                             <div className="relative">
                                                 <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                                                 <input
@@ -1045,11 +1092,36 @@
                                                     value={vSearchTerm}
                                                     onChange={(e) => {
                                                         setVSearchTerm(e.target.value);
-                                                        setVSelectedId(''); // Limpiar selección si el texto cambia
+                                                        setVSelectedId('');
                                                         setVShowDropdown(true);
+                                                        setVHighlightedIndex(-1); // Reiniciar el resaltado al escribir
                                                     }}
                                                     onFocus={() => setVShowDropdown(true)}
-                                                    className="input-standard pl-12 text-lg font-bold text-slate-700"
+                                                    onKeyDown={(e) => {
+                                                        // Lógica del teclado
+                                                        if (!vShowDropdown || filteredAutocomplete.length === 0) return;
+
+                                                        if (e.key === 'ArrowDown') {
+                                                            e.preventDefault();
+                                                            setVHighlightedIndex(prev => (prev < filteredAutocomplete.length - 1 ? prev + 1 : prev));
+                                                        } else if (e.key === 'ArrowUp') {
+                                                            e.preventDefault();
+                                                            setVHighlightedIndex(prev => (prev > 0 ? prev - 1 : 0));
+                                                        } else if (e.key === 'Enter') {
+                                                            e.preventDefault(); // Evitar que se envíe el formulario completo
+                                                            if (vHighlightedIndex >= 0 && vHighlightedIndex < filteredAutocomplete.length) {
+                                                                const p = filteredAutocomplete[vHighlightedIndex];
+                                                                setVSelectedId(p.id);
+                                                                setVSearchTerm(`${p.codigo} - ${p.nombre}`);
+                                                                setVShowDropdown(false);
+                                                                setVHighlightedIndex(-1);
+                                                            }
+                                                        } else if (e.key === 'Escape') {
+                                                            setVShowDropdown(false);
+                                                            setVHighlightedIndex(-1);
+                                                        }
+                                                    }}
+                                                    className="input-standard pl-12 text-lg font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/20"
                                                 />
                                             </div>
 
@@ -1059,7 +1131,7 @@
                                                     {filteredAutocomplete.length === 0 ? (
                                                         <div className="p-4 text-center text-slate-500 font-bold italic">No se encontraron productos...</div>
                                                     ) : (
-                                                        filteredAutocomplete.map(p => (
+                                                        filteredAutocomplete.map((p, index) => (
                                                             <div
                                                                 key={p.id}
                                                                 onMouseDown={(e) => e.preventDefault()}
@@ -1067,8 +1139,12 @@
                                                                     setVSelectedId(p.id);
                                                                     setVSearchTerm(`${p.codigo} - ${p.nombre}`);
                                                                     setVShowDropdown(false);
+                                                                    setVHighlightedIndex(-1);
                                                                 }}
-                                                                className={`p-4 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-blue-50 transition-colors flex justify-between items-center ${p.stock <= 0 ? 'opacity-50 bg-red-50' : ''}`}
+                                                                // Aquí le damos color azul si está seleccionado con el teclado
+                                                                className={`p-4 border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors flex justify-between items-center 
+                                                                    ${vHighlightedIndex === index ? 'bg-blue-100 border-l-4 border-l-blue-500' : 'hover:bg-blue-50 border-l-4 border-l-transparent'} 
+                                                                    ${p.stock <= 0 ? 'opacity-50 bg-red-50' : ''}`}
                                                             >
                                                                 <div>
                                                                     <div className="flex items-center gap-2 mb-1">
@@ -1168,55 +1244,116 @@
                             )}
 
                             {/* --------------------------------------
-                                VISTA: HISTORIAL MAESTRO
+                                VISTA: HISTORIAL (Agrupado por Meses)
                             --------------------------------------- */}
-                            {activeTab === 'historial' && (
-                                <div className="space-y-8 animate-in slide-in-from-right duration-500">
-                                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
-                                        <header>
-                                            <h2 className="text-4xl font-black text-slate-900 tracking-tight">Historial General</h2>
-                                            <p className="text-slate-500 font-medium mt-1">Registro inmutable de todas las operaciones de venta históricas</p>
-                                        </header>
+                            {activeTab === 'historial' && (() => {
+                                const ventasAgrupadas = {};
 
-                                        <button
-                                            onClick={handleExportCSV}
-                                            className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer hover:bg-emerald-700 flex items-center gap-3 shadow-xl shadow-emerald-900/10 transition-all active:scale-95 border border-emerald-500"
-                                        >
-                                            <i className="fas fa-file-export text-xl text-emerald-100"></i>
-                                            Descargar Excel
-                                        </button>
-                                    </div>
+                                // AQUI ESTÁ LA SOLUCIÓN: Usamos "sales" en lugar de "ventas"
+                                sales.forEach(v => { 
+                                    let mesAnio = "REGISTROS ANTIGUOS (SIN FECHA)";
+                                    try {
+                                        if (v.rawDate && v.rawDate.getTime() !== 0) {
+                                            mesAnio = v.rawDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+                                        }
+                                    } catch (e) { }
 
-                                    <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-xl">
-                                        <div className="overflow-x-auto overflow-y-auto max-h-[790px] custom-dropdown-scroll">
-                                            <table className="w-full text-left text-sm custom-table min-w-[900px]">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Fecha/Hora</th>
-                                                        <th>Detalle</th>
-                                                        <th className="text-center">Cantidad</th>
-                                                        <th className="text-right">Ingreso Bruto</th>
-                                                        <th className="text-right text-emerald-400">Utilidad Neta</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
-                                                    {sales.map(s => (
-                                                        <tr key={s.id}>
-                                                            <td className="px-6 py-5 text-slate-500 font-mono font-bold text-xs">{s.timestamp}</td>
-                                                            <td className="px-6 py-5 font-black uppercase text-slate-800">{s.producto}</td>
-                                                            <td className="px-6 py-5 text-center font-bold text-slate-500">
-                                                                {s.cantidad} {s.unidad || 'und.'} {/* <--- MOSTRAR UNIDAD GUARDADA */}
-                                                            </td>
-                                                            <td className="px-6 py-5 text-right font-black text-slate-700 text-lg tracking-tighter">{formatGs(s.total)}</td>
-                                                            <td className="px-6 py-5 text-right font-black text-emerald-600 text-lg tracking-tighter">{formatGs(s.ganancia)}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                    if (!ventasAgrupadas[mesAnio]) {
+                                        ventasAgrupadas[mesAnio] = { ventas: [], totalBruto: 0, totalNeto: 0 };
+                                    }
+                                    ventasAgrupadas[mesAnio].ventas.push(v);
+                                    ventasAgrupadas[mesAnio].totalBruto += (Number(v.total) || 0);
+                                    ventasAgrupadas[mesAnio].totalNeto += (Number(v.ganancia) || 0);
+                                });
+
+                                const mesesArray = Object.entries(ventasAgrupadas);
+
+                                return (
+                                    <div className="max-w-7xl mx-auto space-y-8 animate-in slide-in-from-bottom duration-500 pb-20">
+                                        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10 pt-8">
+                                            <header>
+                                                <h2 className="text-4xl font-black text-slate-900 tracking-tight">Historial General</h2>
+                                                <p className="text-slate-500 font-medium mt-1">Registro inmutable agrupado por meses con totales</p>
+                                            </header>
                                         </div>
+
+                                        {mesesArray.length === 0 ? (
+                                            <div className="bg-white p-20 rounded-[3rem] text-center shadow-xl border border-slate-100">
+                                                <i className="fas fa-receipt text-6xl text-slate-300 mb-6"></i>
+                                                <h3 className="text-2xl font-black text-slate-800 uppercase mb-2">No hay ventas registradas</h3>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-6">
+                                                {mesesArray.map(([mes, data], index) => (
+                                                    <details key={mes} open={index === 0} className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden group [&_summary::-webkit-details-marker]:hidden">
+                                                        <summary className="bg-black text-white p-6 md:p-8 cursor-pointer select-none flex flex-col md:flex-row justify-between items-start md:items-center gap-6 list-none hover:bg-slate-900 transition-colors">
+                                                            <div className="flex items-center gap-5">
+                                                                <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700">
+                                                                    <i className="fas fa-calendar-alt text-blue-400 text-2xl"></i>
+                                                                </div>
+                                                                <div>
+                                                                    <h3 className="text-2xl font-black tracking-widest">{mes}</h3>
+                                                                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">{data.ventas.length} operaciones</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex flex-row gap-6 md:gap-8 items-center w-full md:w-auto justify-between md:justify-end">
+                                                                <div className="text-left md:text-right">
+                                                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Total Ingreso</p>
+                                                                    <p className="text-xl md:text-3xl font-black">{formatGs(data.totalBruto)}</p>
+                                                                </div>
+                                                                <div className="text-left md:text-right border-l border-slate-700 pl-6 md:pl-8">
+                                                                    <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-1">Total Utilidad</p>
+                                                                    <p className="text-xl md:text-3xl font-black text-emerald-400">{formatGs(data.totalNeto)}</p>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={(e) => handleDownloadMonth(e, mes, data.ventas)}
+                                                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors shadow-lg flex items-center gap-2 ml-2"
+                                                                    title="Descargar Excel de este mes"
+                                                                >
+                                                                    <i className="fas fa-download"></i> <span className="hidden md:inline">CSV</span>
+                                                                </button>
+
+                                                                <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-slate-800 ml-2 group-open:rotate-180 transition-transform duration-300">
+                                                                    <i className="fas fa-chevron-down text-slate-400"></i>
+                                                                </div>
+                                                            </div>
+                                                        </summary>
+
+                                                        <div className="overflow-x-auto p-0">
+                                                            <table className="w-full text-left border-collapse min-w-[800px]">
+                                                                <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b-2 border-slate-100">
+                                                                    <tr>
+                                                                        <th className="p-6">Fecha/Hora</th>
+                                                                        <th className="p-6">Detalle</th>
+                                                                        <th className="p-6 text-center">Cantidad</th>
+                                                                        <th className="p-6 text-right">Ingreso Bruto</th>
+                                                                        <th className="p-6 text-right">Utilidad Neta</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-slate-50">
+                                                                    {data.ventas.map((v, i) => (
+                                                                        <tr key={v.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                                                            <td className="p-6 text-sm font-bold text-slate-500 font-mono">
+                                                                                {v.timestamp || 'Sin fecha'}
+                                                                            </td>
+                                                                            <td className="p-6 text-sm font-black text-slate-800 uppercase">{v.producto || 'Desconocido'}</td>
+                                                                            <td className="p-6 text-sm font-bold text-slate-600 text-center">{v.cantidad || 0} {v.unidad || ''}</td>
+                                                                            <td className="p-6 text-lg font-black text-slate-900 text-right">{formatGs(v.total || 0)}</td>
+                                                                            <td className="p-6 text-lg font-black text-emerald-600 text-right">{formatGs(v.ganancia || 0)}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </details>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {/* --------------------------------------
                                 VISTA: INVENTARIO CENTRAL (CRUD)
@@ -1229,7 +1366,7 @@
                                             <p className="text-slate-500 font-medium mt-1">Añada, edite y controle su catálogo de productos</p>
                                         </header>
 
-                                        <label className="bg-slate-800 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer hover:bg-slate-900 flex items-center gap-3 shadow-xl transition-all active:scale-95 border border-slate-700">
+                                        <label className={`bg-slate-800 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer hover:bg-slate-900 flex items-center gap-3 shadow-xl transition-all ${currentUserRole !== 'admin' ? 'hidden' : ''}`}>
                                             <i className="fas fa-file-import text-xl text-emerald-400"></i>
                                             Subir Excel (CSV)
                                             <input type="file" accept=".csv" onChange={handleBulkUpload} className="hidden" />
@@ -1237,7 +1374,7 @@
                                     </div>
 
                                     {/* Formulario de Alta de Inventario */}
-                                    <form onSubmit={handleSaveProduct} className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl grid grid-cols-1 md:grid-cols-6 gap-6 items-end relative overflow-hidden">
+                                    <form onSubmit={handleSaveProduct} className={`bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl grid grid-cols-1 md:grid-cols-6 gap-6 items-end relative overflow-hidden ${currentUserRole !== 'admin' ? 'hidden' : ''}`}>
                                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-slate-800 to-slate-600 rounded-t-[3rem]"></div>
 
                                         <div className="md:col-span-1">
@@ -1308,7 +1445,7 @@
                                                         <th className="text-center">Existencia</th>
                                                         <th className="text-right">Costo Unit.</th>
                                                         <th className="text-right text-blue-300">Precio Venta</th>
-                                                        <th className="text-center">Control</th>
+                                                        <th className={`px-6 py-5 w-32 text-center ${currentUserRole !== 'admin' ? 'hidden' : ''}`}>Control</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -1329,7 +1466,7 @@
                                                             </td>
                                                             <td className="px-6 py-5 text-right font-bold text-slate-500">{formatGs(p.costo)}</td>
                                                             <td className="px-6 py-5 text-right font-black text-blue-700 text-xl tracking-tighter">{formatGs(p.venta)}</td>
-                                                            <td className="px-6 py-5 text-center">
+                                                            <td className={`px-6 py-5 text-center ${currentUserRole !== 'admin' ? 'hidden' : ''}`}>
                                                                 <div className="flex justify-center gap-2">
                                                                     <button onClick={() => handleEditEntry(p)} className="text-blue-500 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 p-3 rounded-xl transition-all shadow-sm">
                                                                         <i className="fas fa-edit"></i>
@@ -1347,6 +1484,7 @@
                                     </div>
                                 </div>
                             )}
+
 
                             {/* --------------------------------------
                                 VISTA 4: BUSCADOR / CATÁLOGO GLOBAL
@@ -1372,34 +1510,37 @@
                                     </div>
 
                                     {/* Resultados del Buscador Global */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-16">
+                                    <div className="flex flex-col gap-6 w-full mx-auto mt-16 px-2">
                                         {searchQuery && filteredGlobalSearch.map(p => (
-                                            <div key={p.id} className="search-card relative overflow-hidden group">
-                                                <div className={`absolute left-0 top-0 bottom-0 w-2 ${p.stock > 0 ? 'bg-emerald-400' : 'bg-red-500'}`}></div>
+                                            <div key={p.id} className="search-card relative overflow-hidden group flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-white rounded-3xl shadow-xl border border-slate-100">
 
-                                                <div className="flex-1 min-w-0 pl-4 pr-6">
-                                                    <div className="flex items-center gap-3 mb-2">
+                                                <div className={`absolute left-0 top-0 bottom-0 w-2 md:w-3 ${p.stock > 0 ? 'bg-emerald-400' : 'bg-red-500'}`}></div>
+
+                                                {/* Lado Izquierdo: Info del Producto */}
+                                                <div className="flex-1 min-w-0 pl-4 pr-6 w-full mb-6 md:mb-0">
+                                                    <div className="flex items-center gap-3 mb-3">
                                                         <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border border-slate-200">
                                                             {p.categoria || 'Genérico'}
                                                         </span>
                                                         <span className="text-slate-400 font-mono text-[10px] font-bold">Ref: {p.codigo}</span>
                                                     </div>
 
-                                                    <h4 className="text-2xl font-black text-slate-800 uppercase text-truncate" title={p.nombre}>
+                                                    <h4 className="text-2xl md:text-2xl font-black text-slate-800 uppercase break-words whitespace-normal leading-tight">
                                                         {p.nombre}
                                                     </h4>
 
                                                     <div className="flex items-center gap-2 mt-4">
                                                         <div className={`w-3 h-3 rounded-full ${p.stock > 0 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 'bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]'}`}></div>
-                                                        <p className={`text-xs font-black uppercase ${p.stock > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                            {p.stock > 0 ? `${p.stock} UNIDADES DISPONIBLES` : 'AGOTADO / SIN STOCK'}
+                                                        <p className={`text-xs font-black uppercase tracking-wider ${p.stock > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                            {p.stock > 0 ? `${p.tipoVenta === 'granel' ? Number(p.stock).toFixed(3) + ' Kg/L' : Math.floor(p.stock) + ' UNIDADES'} DISPONIBLES` : 'AGOTADO / SIN STOCK'}
                                                         </p>
                                                     </div>
                                                 </div>
 
-                                                <div className="text-right flex-shrink-0 pl-6 border-l-2 border-slate-100 py-2">
+                                                {/* Lado Derecho: Precio */}
+                                                <div className="md:text-right flex-shrink-0 pl-4 md:pl-8 border-l-2 md:border-slate-100 py-2 w-full md:w-auto mt-2 md:mt-0">
                                                     <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Precio Público</p>
-                                                    <p className="text-5xl font-black text-blue-600 tracking-tighter leading-none">{formatGs(p.venta)}</p>
+                                                    <p className="text-3xl md:text-4xl font-black text-blue-600 tracking-tighter leading-none">{formatGs(p.venta)}</p>
                                                 </div>
                                             </div>
                                         ))}
